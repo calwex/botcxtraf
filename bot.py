@@ -1,5 +1,6 @@
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.update import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 # Налаштування логування
@@ -204,9 +205,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
 
     support_note = {
-        "uk": "\n\nЯкщо не знайшли відповідь — пишіть власнику @calwxxxx або кураторам у групі.",
-        "ru": "\n\nЕсли не нашли ответ — пишите владельцу @calwxxxx или кураторам в группе.",
-        "en": "\n\nIf you didn't find your answer — contact owner @calwxxxx or curators in the group."
+        "uk": "\n\nЯкщо не знайшли відповідь — пишіть сапорту @calwxxxx або кураторам у групі.",
+        "ru": "\n\nЕсли не нашли ответ — пишите саппорту @calwxxxx или кураторам в группе.",
+        "en": "\n\nIf you didn't find your answer — contact support @calwxxxx or curators in the group."
     }
 
     if data.startswith("lang_"):
