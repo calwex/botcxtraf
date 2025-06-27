@@ -1,17 +1,13 @@
+import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 # Налаштування логування
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Кількість елементів на сторінці
-ITEMS_PER_PAGE = 10
-
-# Мови
-LANGS = {"uk": "Українська 🇺🇦", "ru": "Русский 🇷🇺", "en": "English 🇬🇧"}
-
-# Запитання та відповіді
+# Словник із даними (приклад із 5 запитаннями, додайте решту до 50)
 DATA = {
     "uk": [
         ("Як залучити більше трафіку на казино?", "Використовуйте SEO, контекстну рекламу та партнерські програми."),
@@ -171,82 +167,65 @@ DATA = {
     ],
 }
 
-# Функція для створення пагінації
-def paginate_buttons(questions, lang, page=0):
-    start = page * ITEMS_PER_PAGE
-    end = start + ITEMS_PER_PAGE
+LANGS = {"uk": "Українська 🇺🇦", "ru": "Русский 🇷🇺", "en": "English 🇬🇧"}
+ITEMS_PER_PAGE = 5
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [[InlineKeyboardButton(LANGS[lang], callback_data=f"lang_{lang}")] for lang in LANGS]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("Виберіть мову / Выберите язык / Choose language:", reply_markup=reply_markup)
+
+async def paginate_buttons(lang: str, page: int):
+    questions = DATA[lang]["questions"]
+    total_pages = (len(questions) + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE
+    start_idx = page * ITEMS_PER_PAGE
+    end_idx = start_idx + ITEMS_PER_PAGE
     keyboard = [
-        [InlineKeyboardButton(q[:40]+"...", callback_data=f"q_{lang}_{page}_{i}")]
-        for i, (q, _) in enumerate(questions[start:end])
+        [InlineKeyboardButton(q["question"], callback_data=f"q_{lang}_{key}")] for key, q in list(questions.items())[start_idx:end_idx]
     ]
     nav_buttons = []
     if page > 0:
-        nav_buttons.append(InlineKeyboardButton("⬅️ Попередня / Previous", callback_data=f"page_{lang}_{page-1}"))
-    if end < len(questions):
-        nav_buttons.append(InlineKeyboardButton("Наступна / Next ➡️", callback_data=f"page_{lang}_{page+1}"))
+        nav_buttons.append(InlineKeyboardButton("⬅️ Попередня / Предыдущая / Previous", callback_data=f"page_{lang}_{page-1}"))
+    if page < total_pages - 1:
+        nav_buttons.append(InlineKeyboardButton("Наступна / Следующая / Next ➡️", callback_data=f"page_{lang}_{page+1}"))
     if nav_buttons:
         keyboard.append(nav_buttons)
     return InlineKeyboardMarkup(keyboard)
 
-# Початок роботи бота
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton(LANGS[code], callback_data=f"lang_{code}")]
-                for code in LANGS]
-    await update.message.reply_text(
-        "Оберіть мову / Выберите язык / Choose language:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-# Обробка натискань кнопок
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
 
-    support_note = {
-        "uk": "\n\nЯкщо не знайшли відповідь — пишіть сапорту @calwxxxx або кураторам у групі.",
-        "ru": "\n\nЕсли не нашли ответ — пишите саппорту @calwxxxx или кураторам в группе.",
-        "en": "\n\nIf you didn't find your answer — contact support @calwxxxx or curators in the group."
-    }
-
     if data.startswith("lang_"):
-        lang = data[5:]
-        context.user_data['lang'] = lang
-        questions = DATA.get(lang, [])
-        if not questions:
-            await query.edit_message_text("Питання не знайдено.")
-            return
-        await query.edit_message_text(
-            f"Оберіть питання / Выберите вопрос / Choose a question:{support_note.get(lang, '')}",
-            reply_markup=paginate_buttons(questions, lang, 0)
-        )
+        lang = data.split("_")[1]
+        context.user_data["lang"] = lang
+        reply_markup = await paginate_buttons(lang, 0)
+        await query.message.reply_text(f"{LANGS[lang]}:", reply_markup=reply_markup)
+
+    elif data.startswith("q_"):
+        _, lang, q_id = data.split("_")
+        answer = DATA[lang]["questions"][q_id]["answer"]
+        support_message = DATA[lang]["support_message"]
+        await query.message.reply_text(f"{answer}\n\n{support_message}")
 
     elif data.startswith("page_"):
         _, lang, page = data.split("_")
         page = int(page)
-        questions = DATA.get(lang, [])
-        await query.edit_message_text(
-            f"Оберіть питання / Выберите вопрос / Choose a question:{support_note.get(lang, '')}",
-            reply_markup=paginate_buttons(questions, lang, page)
-        )
+        reply_markup = await paginate_buttons(lang, page)
+        await query.message.reply_text(f"{LANGS[lang]}:", reply_markup=reply_markup)
 
-    elif data.startswith("q_"):
-        _, lang, page, idx = data.split("_")
-        page = int(page)
-        idx = int(idx)
-        questions = DATA.get(lang, [])
-        if idx < len(questions):
-            question, answer = questions[page * ITEMS_PER_PAGE + idx]
-            await query.edit_message_text(
-                f"Питання: {question}\nВідповідь: {answer}{support_note.get(lang, '')}",
-                reply_markup=paginate_buttons(questions, lang, page)
-            )
-        else:
-            await query.edit_message_text("Питання не знайдено.")
-
-# Запуск бота
 if __name__ == "__main__":
     application = ApplicationBuilder().token("7677491803:AAGKc3oVN_H7JsCyN1716qsU7zWAEIQZeRc").build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_handler))
-    application.run_polling()
+
+    # Налаштування webhook
+    port = int(os.environ.get("PORT", 8443))
+    webhook_url = "https://botcxtraf.onrender.com/webhook"
+    application.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path="/webhook",
+        webhook_url=webhook_url
+    )
