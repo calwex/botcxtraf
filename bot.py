@@ -7,7 +7,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Дані (структура збережена)
+# Дані про їжу
 DATA = {
     "uk": {
         "questions": {
@@ -62,7 +62,7 @@ DATA = {
             "49": {"question": "Як залучити трафік з LinkedIn?", "answer": "Публікуйте статті, беріть участь у групах, пов'язаних з азартними іграми."},
             "50": {"question": "Які креативи найкраще працюють для мобільних пристроїв?", "answer": "Адаптивні банери, відео, інтерактивні елементи."}
         },
-        "support_message": "Якщо не знайшли відповідь — пишіть власнику @calwxxxx або адмінам у групі"
+        "support_message": "Якщо не знайшли відповідь — пишіть власникам @calwxxxx або адмінам у групі"
     },
     "ru": {
         "questions": {
@@ -185,14 +185,6 @@ INSTRUCTIONS = {
     "en": "Choose a question from the list."
 }
 
-# Словник із перекладами інструкцій
-INSTRUCTIONS = {
-    "uk": "Оберіть питання зі списку.",
-    "ru": "Выберите вопрос из списка.",
-    "en": "Choose a question from the list."
-}
-
-# Словник із перекладами повідомлень про помилки
 ERROR_MESSAGES = {
     "uk": {
         "invalid_lang": "Помилка вибору мови.",
@@ -232,7 +224,7 @@ async def paginate_buttons(lang: str, page: int):
     questions = DATA[lang]["questions"]
     total_pages = (len(questions) + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE
     start_idx = page * ITEMS_PER_PAGE
-    end_idx = min(start_idx + ITEMS_PER_PAGE, len(questions))  # Уникаємо виходу за межі
+    end_idx = min(start_idx + ITEMS_PER_PAGE, len(questions))
     keyboard = [
         [InlineKeyboardButton(q["question"], callback_data=f"q_{lang}_{key}")] 
         for key, q in list(questions.items())[start_idx:end_idx]
@@ -250,7 +242,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
-    lang = context.user_data.get("lang", "uk")  # За замовчуванням українська
+    lang = context.user_data.get("lang", "uk")
 
     if data.startswith("lang_"):
         parts = data.split("_")
@@ -327,7 +319,6 @@ if __name__ == "__main__":
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_handler))
 
-    # Налаштування webhook
     port = int(os.environ.get("PORT", 8443))
     webhook_url = "https://botcxtraf.onrender.com/webhook"
     application.run_webhook(
