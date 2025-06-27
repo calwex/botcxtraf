@@ -245,8 +245,22 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("Питання не знайдено.")
 
 # Запуск бота
+import os
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+
+# Ваш попередній код: DATA, LANGS, start, button_handler, paginate_buttons
+
 if __name__ == "__main__":
     application = ApplicationBuilder().token("7677491803:AAGKc3oVN_H7JsCyN1716qsU7zWAEIQZeRc").build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_handler))
-    application.run_polling()
+
+    # Налаштування webhook
+    port = int(os.environ.get("PORT", 8443))
+    webhook_url = "https://botcxtraf.onrender.com/webhook"  # Ваш URL на Render
+    application.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path="/webhook",
+        webhook_url=webhook_url
+    )
