@@ -1,6 +1,5 @@
 import logging
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.update import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 # Налаштування логування
@@ -246,34 +245,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("Питання не знайдено.")
 
 # Запуск бота
-import os
-from flask import Flask, request
-from telegram.ext import ApplicationBuilder
-
-TOKEN = "7677491803:AAGKc3oVN_H7JsCyN1716qsU7zWAEIQZeRc"
-WEBHOOK_PATH = f"/{TOKEN}"
-WEBHOOK_URL = f"https://{os.environ.get('https://botcxtraf.onrender.com')}{WEBHOOK_PATH}"
-
-app = Flask(__name__)
-
-application = ApplicationBuilder().token(TOKEN).build()
-application.add_handler(CommandHandler("start", start))
-application.add_handler(CallbackQueryHandler(button_handler))
-
-@app.route(WEBHOOK_PATH, methods=["POST"])
-async def webhook():
-    await application.update_queue.put(Update.de_json(request.get_json(force=True), application.bot))
-    return "OK"
-
-@app.route("/", methods=["GET"])
-def home():
-    return "Bot is running (webhook)."
-
-async def set_webhook():
-    await application.bot.set_webhook(WEBHOOK_URL)
-
 if __name__ == "__main__":
-    import asyncio
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(set_webhook())
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    application = ApplicationBuilder().token("7677491803:AAGKc3oVN_H7JsCyN1716qsU7zWAEIQZeRc").build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button_handler))
+    application.run_polling()
