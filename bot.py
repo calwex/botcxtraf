@@ -7,7 +7,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Дані (структура збережена, лише приклад для скорочення)
+# Дані (структура збережена)
 DATA = {
     "uk": {
         "questions": {
@@ -62,7 +62,7 @@ DATA = {
             "49": {"question": "Як залучити трафік з LinkedIn?", "answer": "Публікуйте статті, беріть участь у групах, пов'язаних з азартними іграми."},
             "50": {"question": "Які креативи найкраще працюють для мобільних пристроїв?", "answer": "Адаптивні банери, відео, інтерактивні елементи."}
         },
-        "support_message": "Якщо не знайшли відповідь — пишіть сапорту @calwxxxx або кураторам у групі"
+        "support_message": "Якщо не знайшли відповідь — пишіть власнику @calwxxxx або адмінам у групі"
     },
     "ru": {
         "questions": {
@@ -117,7 +117,7 @@ DATA = {
             "49": {"question": "Как привлечь трафик с LinkedIn?", "answer": "Публикуйте статьи, участвуйте в группах, связанных с азартными играми."},
             "50": {"question": "Какие креативы лучше всего работают для мобильных устройств?", "answer": "Адаптивные баннеры, видео, интерактивные элементы."}
         },
-        "support_message": "Если не нашли ответ — пишите саппорту @calwxxxx или кураторам в группе"
+        "support_message": "Если не нашли ответ — пишите владельцу @calwxxxx или админам в группе"
     },
     "en": {
         "questions": {
@@ -172,12 +172,56 @@ DATA = {
             "49": {"question": "How to drive traffic from LinkedIn?", "answer": "Publish articles, participate in gambling-related groups."},
             "50": {"question": "Which creatives work best for mobile devices?", "answer": "Responsive banners, videos, interactive elements."}
         },
-        "support_message": "If you didn’t find the answer — write to support @calwxxxx or curators in the group"
+        "support_message": "If you didn’t find the answer — write to owner @calwxxxx or admins in the group"
     }
 }
 
 LANGS = {"uk": "Українська 🇺🇦", "ru": "Русский 🇷🇺", "en": "English 🇬🇧"}
 ITEMS_PER_PAGE = 5
+
+INSTRUCTIONS = {
+    "uk": "Оберіть питання зі списку.",
+    "ru": "Выберите вопрос из списка.",
+    "en": "Choose a question from the list."
+}
+
+# Словник із перекладами інструкцій
+INSTRUCTIONS = {
+    "uk": "Оберіть питання зі списку.",
+    "ru": "Выберите вопрос из списка.",
+    "en": "Choose a question from the list."
+}
+
+# Словник із перекладами повідомлень про помилки
+ERROR_MESSAGES = {
+    "uk": {
+        "invalid_lang": "Помилка вибору мови.",
+        "unsupported_lang": "Непідтримувана мова.",
+        "invalid_query": "Некоректний запит.",
+        "question_not_found": "Питання не знайдено.",
+        "invalid_page": "Некоректний номер сторінки.",
+        "page_out_of_range": "Сторінка поза межами діапазону.",
+        "select_lang_first": "Спочатку виберіть мову через /start."
+    },
+    "ru": {
+        "invalid_lang": "Ошибка выбора языка.",
+        "unsupported_lang": "Неподдерживаемый язык.",
+        "invalid_query": "Некорректный запрос.",
+        "question_not_found": "Вопрос не найден.",
+        "invalid_page": "Некорректный номер страницы.",
+        "page_out_of_range": "Страница вне диапазона.",
+        "select_lang_first": "Сначала выберите язык через /start."
+    },
+    "en": {
+        "invalid_lang": "Language selection error.",
+        "unsupported_lang": "Unsupported language.",
+        "invalid_query": "Invalid query.",
+        "question_not_found": "Question not found.",
+        "invalid_page": "Invalid page number.",
+        "page_out_of_range": "Page out of range.",
+        "select_lang_first": "First select a language via /start."
+    }
+}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton(LANGS[lang], callback_data=f"lang_{lang}")] for lang in LANGS]
@@ -206,33 +250,34 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
+    lang = context.user_data.get("lang", "uk")  # За замовчуванням українська
 
     if data.startswith("lang_"):
         parts = data.split("_")
         if len(parts) != 2:
-            await query.message.reply_text("Помилка вибору мови.")
+            await query.message.reply_text(ERROR_MESSAGES[lang]["invalid_lang"])
             return
         lang = parts[1]
         if lang not in DATA:
-            await query.message.reply_text("Непідтримувана мова.")
+            await query.message.reply_text(ERROR_MESSAGES[lang]["unsupported_lang"])
             return
         context.user_data["lang"] = lang
         page = 0
         questions = DATA[lang]["questions"]
         total_pages = (len(questions) + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE
         reply_markup = await paginate_buttons(lang, page)
-        message_text = f"{LANGS[lang]} (Сторінка {page+1}/{total_pages}):\nОберіть питання зі списку."
+        message_text = f"{LANGS[lang]} (Сторінка {page+1}/{total_pages}):\n{INSTRUCTIONS[lang]}"
         message = await query.message.reply_text(message_text, reply_markup=reply_markup)
         context.user_data["questions_message_id"] = message.message_id
 
     elif data.startswith("q_"):
         parts = data.split("_")
         if len(parts) != 3:
-            await query.message.reply_text("Некоректний запит.")
+            await query.message.reply_text(ERROR_MESSAGES[lang]["invalid_query"])
             return
         _, lang, q_id = parts
         if lang not in DATA:
-            await query.message.reply_text("Непідтримувана мова.")
+            await query.message.reply_text(ERROR_MESSAGES[lang]["unsupported_lang"])
             return
         questions = DATA[lang]["questions"]
         question = questions.get(q_id)
@@ -241,32 +286,32 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             support_message = DATA[lang]["support_message"]
             await query.message.reply_text(f"{answer}\n\n{support_message}")
         else:
-            await query.message.reply_text("Питання не знайдено.")
+            await query.message.reply_text(ERROR_MESSAGES[lang]["question_not_found"])
 
     elif data.startswith("page_"):
         parts = data.split("_")
         if len(parts) != 3:
-            await query.message.reply_text("Некоректний запит сторінки.")
+            await query.message.reply_text(ERROR_MESSAGES[lang]["invalid_page"])
             return
         _, lang, page_str = parts
         try:
             page = int(page_str)
         except ValueError:
-            await query.message.reply_text("Некоректний номер сторінки.")
+            await query.message.reply_text(ERROR_MESSAGES[lang]["invalid_page"])
             return
         if lang not in DATA:
-            await query.message.reply_text("Непідтримувана мова.")
+            await query.message.reply_text(ERROR_MESSAGES[lang]["unsupported_lang"])
             return
         if "questions_message_id" not in context.user_data:
-            await query.message.reply_text("Спочатку виберіть мову через /start.")
+            await query.message.reply_text(ERROR_MESSAGES[lang]["select_lang_first"])
             return
         questions = DATA[lang]["questions"]
         total_pages = (len(questions) + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE
         if page < 0 or page >= total_pages:
-            await query.message.reply_text("Сторінка поза межами діапазону.")
+            await query.message.reply_text(ERROR_MESSAGES[lang]["page_out_of_range"])
             return
         reply_markup = await paginate_buttons(lang, page)
-        message_text = f"{LANGS[lang]} (Сторінка {page+1}/{total_pages}):\nОберіть питання зі списку."
+        message_text = f"{LANGS[lang]} (Сторінка {page+1}/{total_pages}):\n{INSTRUCTIONS[lang]}"
         await context.bot.edit_message_text(
             chat_id=query.message.chat_id,
             message_id=context.user_data["questions_message_id"],
@@ -275,8 +320,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 if __name__ == "__main__":
-    # Отримуємо токен із змінної середовища
-    bot_token = os.environ.get("BOT_TOKEN", "7677491803:AAGKc3oVN_H7JsCyN1716qsU7zWAEIQZeRc")
+    bot_token = os.environ.get("BOT_TOKEN")
+    if not bot_token:
+        raise ValueError("BOT_TOKEN not set in environment variables")
     application = ApplicationBuilder().token(bot_token).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_handler))
