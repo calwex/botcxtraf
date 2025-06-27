@@ -183,7 +183,7 @@ PAGE_TEXT = {
     "uk": "Сторінка",
     "ru": "Страница",
     "en": "Page"
-    }
+}
 
 INSTRUCTIONS = {
     "uk": "Оберіть питання зі списку.",
@@ -264,7 +264,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         questions = DATA[lang]["questions"]
         total_pages = (len(questions) + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE
         reply_markup = await paginate_buttons(lang, page)
-        message_text = f"{LANGS[lang]} (Сторінка {page+1}/{total_pages}):\n{INSTRUCTIONS[lang]}"
+        message_text = f"{LANGS[lang]} ({PAGE_TEXT[lang]} {page+1}/{total_pages}):\n{INSTRUCTIONS[lang]}"
         message = await query.message.reply_text(message_text, reply_markup=reply_markup)
         context.user_data["questions_message_id"] = message.message_id
 
@@ -309,7 +309,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text(ERROR_MESSAGES[lang]["page_out_of_range"])
             return
         reply_markup = await paginate_buttons(lang, page)
-        message_text = f"{LANGS[lang]} (Сторінка {page+1}/{total_pages}):\n{INSTRUCTIONS[lang]}"
+        message_text = f"{LANGS[lang]} ({PAGE_TEXT[lang]} {page+1}/{total_pages}):\n{INSTRUCTIONS[lang]}"
         await context.bot.edit_message_text(
             chat_id=query.message.chat_id,
             message_id=context.user_data["questions_message_id"],
